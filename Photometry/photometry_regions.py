@@ -176,6 +176,14 @@ while True:
     except OSError:
         reg_path = str(input('Invalid file. Try again: '))
 
+print('Is this SPIRE data?') #adjust units of SPIRE data. Assumes the fits file has units of MJy / sr for SPIRE and Jy / pix for PACS
+spire = ' '
+while (spire != 'y' and spire != 'n'):
+    spire = str(input('y/n: '))
+multiplier = 1
+if spire == 'y':
+    multiplier = 2 * math.pi * (1 - math.cos(math.pi * pix_scale / 360)) * 1000000 #get the solid angle per pixel, multiply by a million
+
 lines = regions.readlines()
 background_apertures = []
 galaxy_aperture = None
@@ -198,7 +206,7 @@ if len(background_apertures) == 0:
 else:
     sky = background(value_data, error_data, background_apertures)
 
-final_flux = galaxy_flux[0] - sky[0] * galaxy_aperture.area() #scale background and subtract
-final_error = math.sqrt(galaxy_flux[1] * galaxy_flux[1] + sky[1] * galaxy_aperture.area() * sky[1] * galaxy_aperture.area()) #calculate error
+final_flux = (galaxy_flux[0] - sky[0] * galaxy_aperture.area()) * multiplier #scale background and subtract
+final_error = (math.sqrt(galaxy_flux[1] * galaxy_flux[1] + sky[1] * galaxy_aperture.area() * sky[1] * galaxy_aperture.area())) * multiplier #calculate error
 
-print('Flux: ' + str(final_flux) + '\nError: ' + str(final_error))
+print('Flux: ' + str(final_flux) + ' Jy\nError: ' + str(final_error) + ' Jy')
