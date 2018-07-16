@@ -15,8 +15,10 @@ def positionStringtoInt(input_string, ra):
 
     if ra: #perform RA conversion if RA is true
         return(int_split[0] * 15 + int_split[1] * 0.25 + int_split[2] / 240)
-    else: #otherwise, perform declination conversion
-        return(int_split[0] + int_split[1] /60 + int_split[2] / 3600)
+    elif int_split[0] > 0: #otherwise, perform declination conversion
+        return(int_split[0] + int_split[1] / 60 + int_split[2] / 3600)
+    else:
+        return(int_split[0] - int_split[1] / 60 - int_split[2] / 3600)
 
 #convert arcsec to number of pixels
 def arcsecToPix(arcsec, scale):
