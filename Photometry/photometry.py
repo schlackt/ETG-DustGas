@@ -113,6 +113,14 @@ aperture_type = ' '
 while (aperture_type != 'circular' and aperture_type != 'elliptical'):
     aperture_type = str(input('Enter \'circular\' or \'elliptical\': '))
 
+#ask about sky subtraction
+print('Would you like to perform a background subtraction?')
+sky_subtraction = ' '
+while (sky_subtraction != 'y' and sky_subtraction != 'n'):
+    sky_subtraction = str(input('y/n: '))
+
+
+
 #load image headers
 values_hdr = fits_values[1].header
 pix_scale = abs(values_hdr['CDELT1'])
