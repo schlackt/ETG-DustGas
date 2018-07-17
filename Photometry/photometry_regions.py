@@ -24,6 +24,10 @@ def positionStringtoInt(input_string, ra):
 def arcsecToPix(arcsec, scale):
     return arcsec / 3600 / scale
 
+#get the solid angle in sr per pixel
+def solidAngle(scale):
+    return scale * scale * math.pi * math.pi / 180 / 180
+
 #perform photometry on a circular aperture. Returns tuple in the form (x position, y position, aperture sum, error)
 def circularPhotometry(value_data, error_data, coord_info, scale, ra, dec, radius):
     # convert to pixels
@@ -91,7 +95,7 @@ def translate(line, coord_info, scale):
             semimajor = float(remainder_commasplit[3].split('"')[0]) #cut the quotation mark away from the number
             semimajor_pix = arcsecToPix(semimajor, scale)
             #the fifth entry is the rotation angle for elliptical apertures
-            angle = float(remainder_commasplit[4].split(')')[0]) * math.pi / 180 #cut the closing parenthesis away from the number and convert to radians
+            angle = float(remainder_commasplit[4].split(')')[0]) * math.pi / 180 + math.pi / 2 #cut the closing parenthesis away from the number and convert to radians
             return (galaxy_aperture, EllipticalAperture((x, y), semimajor_pix, semiminor_pix, angle))
     else:
         return None
@@ -120,11 +124,15 @@ def background(value_data, error_data, apertures):
     return (mean, mean_error)
 
 #get file paths and load the files
-print('Enter the file path of the FITS image.')
+print('\nEnter the file path of the FITS image.')
 values_path = str(input('Image File Path: '))
+
+print('\n')
+
 while True:
     try:
         fits_values = fits.open(values_path)
+        fits_values.info()
         break
     except ValueError:
         values_path = str(input('Invalid input. Try again: '))
@@ -133,9 +141,32 @@ while True:
     except OSError:
         values_path = str(input('Invalid file. Try again: '))
 
-#load image headers
-values_hdr = fits_values[1].header
-pix_scale = abs(values_hdr['CDELT1'])
+print('\n')
+
+print('Enter the level of the FITS file that you would like to analyze. (0, 1, 2,...)')
+while True:
+    try:
+        level = int(input('Level: '))
+        #load image headers
+        values_hdr = fits_values[level].header
+        break
+    except ValueError:
+        print('Invalid input. Try again.')
+    except IndexError:
+        print('This level was not found. Try again.')
+
+print('\n')
+
+print('Enter the name of the pixel scale variable in the FITS file. It is usually \'CDELT1\'.')
+while True:
+    try:
+        scale_name = str(input('Variable name: '))
+        pix_scale = abs(values_hdr[scale_name])
+        break
+    except KeyError:
+        print('Variable not found. Try again.')
+
+print('\n')
 
 #parse WCS info from headers
 values_wcs = wcs.WCS(values_hdr)
@@ -157,13 +188,15 @@ while True:
     except OSError:
         errors_path = str(input('Invalid file. Try again: '))
 
+print('\n')
+
 #retrieve data from the fits files
-value_data = fits_values[1].data
+value_data = fits_values[level].data
 
 if errors_path == 's':
     error_data = None
 else:
-    error_data = fits_errors[1].data
+    error_data = fits_errors[level].data
 
 print('Enter the file path of the regions file. Background apertures should be green, and the object aperture should be red.')
 reg_path = str(input('Regions File Path: '))
@@ -178,13 +211,17 @@ while True:
     except OSError:
         reg_path = str(input('Invalid file. Try again: '))
 
+print('\n')
+
 print('Is this SPIRE data?') #adjust units of SPIRE data. Assumes the fits file has units of MJy / sr for SPIRE and Jy / pix for PACS
 spire = ' '
 while (spire != 'y' and spire != 'n'):
     spire = str(input('y/n: '))
 multiplier = 1
 if spire == 'y':
-    multiplier = 2 * math.pi * (1 - math.cos(math.pi * pix_scale / 360)) * 1000000 #get the solid angle per pixel, multiply by a million
+    multiplier = solidAngle(pix_scale) * 1000000 #get the solid angle per pixel, multiply by a million to get Jy
+
+print('\n')
 
 lines = regions.readlines()
 background_apertures = []
