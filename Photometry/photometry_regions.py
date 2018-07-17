@@ -246,6 +246,11 @@ else:
     sky = background(value_data, error_data, background_apertures)
 
 final_flux = (galaxy_flux[0] - sky[0] * galaxy_aperture.area()) * multiplier #scale background and subtract
-final_error = (math.sqrt(galaxy_flux[1] * galaxy_flux[1] + sky[1] * galaxy_aperture.area() * sky[1] * galaxy_aperture.area())) * multiplier #calculate error
+error_sky = (math.sqrt(galaxy_flux[1] * galaxy_flux[1] + sky[1] * galaxy_aperture.area() * sky[1] * galaxy_aperture.area())) * multiplier #calculate error from sky
+if spire == 'y': #calculate calibration error
+    error_cal = final_flux * 0.07
+else:
+    error_cal = final_flux * 0.05
+final_error = math.sqrt(error_cal * error_cal + error_sky * error_sky)
 
 print('Flux: ' + str(final_flux) + ' Jy\nError: ' + str(final_error) + ' Jy')
