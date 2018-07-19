@@ -28,41 +28,6 @@ def arcsecToPix(arcsec, scale):
 def solidAngle(scale):
     return scale * scale * math.pi * math.pi / 180 / 180
 
-#perform photometry on a circular aperture. Returns tuple in the form (x position, y position, aperture sum, error)
-def circularPhotometry(value_data, error_data, coord_info, scale, ra, dec, radius):
-    # convert to pixels
-    x, y = coord_info.all_world2pix(ra, dec, 0)
-    radius_pix = arcsecToPix(radius, scale)
-
-    #perform photometry
-    aperture = CircularAperture((x, y), radius_pix)
-    phot_table = aperture_photometry(value_data, aperture, error_data)
-
-    results = phot_table.as_array()[0] #pull results from table
-
-    if len(results) == 4:
-        return (results[1], results[2], results[3], 0) #if no error was calculated, return 0 for error
-    else:
-        return (results[1], results[2], results[3], results[4])
-
-#perform photometry on an elliptical aperture. Returns tuple in the form (x position, y position, aperture sum, error)
-def ellipticalPhotometry(value_data, error_data, coord_info, scale, ra, dec, semimajor, semiminor, angle):
-    # convert to pixels
-    x, y = coord_info.all_world2pix(ra, dec, 0)
-    semimajor_pix = arcsecToPix(semimajor, scale)
-    semiminor_pix = arcsecToPix(semiminor, scale)
-
-    #perform photometry
-    aperture = EllipticalAperture((x, y), semimajor_pix, semiminor_pix, angle)
-    phot_table = aperture_photometry(value_data, aperture, error_data)
-
-    results = phot_table.as_array()[0] #pull results from table
-
-    if len(results) == 4:
-        return (results[1], results[2], results[3], 0) #if no error was calculated, return 0 for error
-    else:
-        return (results[1], results[2], results[3], results[4])
-
 #parse the relevant information from a region file line. Return None if the line is not an object.
 #Otherwise, return relevant region information in a tuple with a boolean.
 #The boolean is True if the aperture is for the galaxy itself, False otherwise
@@ -141,30 +106,36 @@ while True:
     except OSError:
         values_path = str(input('Invalid file. Try again: '))
 
-print('\n')
+#print('\n')
+#
+#print('Enter the level of the FITS file that you would like to analyze. (0, 1, 2,...)')
+#while True:
+#    try:
+#        level = int(input('Level: '))
+#        #load image headers
+#        values_hdr = fits_values[level].header
+#        break
+#    except ValueError:
+#        print('Invalid input. Try again.')
+#    except IndexError:
+#        print('This level was not found. Try again.')
 
-print('Enter the level of the FITS file that you would like to analyze. (0, 1, 2,...)')
-while True:
-    try:
-        level = int(input('Level: '))
-        #load image headers
-        values_hdr = fits_values[level].header
-        break
-    except ValueError:
-        print('Invalid input. Try again.')
-    except IndexError:
-        print('This level was not found. Try again.')
+level = 1 #for out sample, this is always true
+values_hdr = fits_values[level].header
 
-print('\n')
+#print('\n')
+#
+#print('Enter the name of the pixel scale variable in the FITS file. It is usually \'CDELT1\'.')
+#while True:
+#    try:
+#        scale_name = str(input('Variable name: '))
+#        pix_scale = abs(values_hdr[scale_name])
+#        break
+#    except KeyError:
+#        print('Variable not found. Try again.')
 
-print('Enter the name of the pixel scale variable in the FITS file. It is usually \'CDELT1\'.')
-while True:
-    try:
-        scale_name = str(input('Variable name: '))
-        pix_scale = abs(values_hdr[scale_name])
-        break
-    except KeyError:
-        print('Variable not found. Try again.')
+scale_name = 'CDELT1' # for our sample, this is always true
+pix_scale = abs(values_hdr[scale_name])
 
 print('\n')
 
@@ -253,4 +224,4 @@ else:
     error_cal = final_flux * 0.05
 final_error = math.sqrt(error_cal * error_cal + error_sky * error_sky)
 
-print('Flux: ' + str(final_flux) + ' Jy\nError: ' + str(final_error) + ' Jy')
+print('Flux: ' + str(final_flux) + ' Jy\nSky Error: ' + str(error_sky) + ' Jy\nTotal Error: ' + str(final_error) + ' Jy')
