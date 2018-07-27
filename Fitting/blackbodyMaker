@@ -1,0 +1,7 @@
+from astropy import units as u
+import numpy as np
+wavelengths = np.array([20,70,160,250,350,500,850,1100]) * u.um
+frequencies = wavelengths.to(u.Hz, u.spectral())
+temperature = 15 * u.K
+column = 1e22 * u.cm**-2
+flux = modified_blackbody(frequencies, temperature, beta=1.75, column=column)
