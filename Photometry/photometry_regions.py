@@ -66,7 +66,7 @@ def translate(line, coord_info, scale):
             if radius1 < radius2:
                 semiminor = radius1_pix
                 semimajor = radius2_pix
-                angle = angle + math.pi() / 2
+                angle = angle + math.pi / 2
             else:
                 semiminor = radius2_pix
                 semimajor = radius1_pix
@@ -115,36 +115,30 @@ while True:
     except OSError:
         values_path = str(input('Invalid file. Try again: '))
 
-#print('\n')
-#
-#print('Enter the level of the FITS file that you would like to analyze. (0, 1, 2,...)')
-#while True:
-#    try:
-#        level = int(input('Level: '))
-#        #load image headers
-#        values_hdr = fits_values[level].header
-#        break
-#    except ValueError:
-#        print('Invalid input. Try again.')
-#    except IndexError:
-#        print('This level was not found. Try again.')
+print('\n')
 
-level = 1 #for out sample, this is always true
-values_hdr = fits_values[level].header
+print('Enter the level of the FITS file that you would like to analyze. (0, 1, 2,...)')
+while True:
+    try:
+        level = int(input('Level: '))
+        #load image headers
+        values_hdr = fits_values[level].header
+        break
+    except ValueError:
+        print('Invalid input. Try again.')
+    except IndexError:
+        print('This level was not found. Try again.')
 
-#print('\n')
-#
-#print('Enter the name of the pixel scale variable in the FITS file. It is usually \'CDELT1\'.')
-#while True:
-#    try:
-#        scale_name = str(input('Variable name: '))
-#        pix_scale = abs(values_hdr[scale_name])
-#        break
-#    except KeyError:
-#        print('Variable not found. Try again.')
+print('\n')
 
-scale_name = 'CDELT1' # for our sample, this is always true
-pix_scale = abs(values_hdr[scale_name])
+print('Enter the name of the pixel scale variable in the FITS file. It is usually \'CDELT1\'.')
+while True:
+    try:
+        scale_name = str(input('Variable name: '))
+        pix_scale = abs(values_hdr[scale_name])
+        break
+    except KeyError:
+        print('Variable not found. Try again.')
 
 print('\n')
 
