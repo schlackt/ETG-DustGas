@@ -11,13 +11,6 @@ _c = 300000000
 print('\nEnter the file path of the results spreadsheet.')
 results_path = str(input('Spreadsheet File Path: '))
 
-print('\n')
-
-print('Generate plots?')
-plots = ' '
-while (plots != 'y' and plots != 'n'):
-    plots = str(input('y/n: '))
-
 while True:
     try:
         with open(results_path, newline = '') as results:
@@ -34,6 +27,13 @@ while True:
 
 print('\n')
 
+print('Generate plots?')
+plots = ' '
+while (plots != 'y' and plots != 'n'):
+    plots = str(input('y/n: '))
+
+print('\n')
+
 writetofile = [] # array that contains the lines of the output csv
 for row in data:
     i = 3
@@ -42,6 +42,9 @@ for row in data:
     fluxes = []
     fluxes_err = []
     outputrow = [row[0], row[1], row[2]] # array that contains the elements of a line of the output csv
+    bestflux = 0
+    bestfreq = 0
+    tracker = 0
     while i < 24:
         if row[i] == '': # skip a wavelength with no data
             i += 3
@@ -51,22 +54,36 @@ for row in data:
             detections += 1
 
             if i == 3: # append the wavelength of the detection
-                wavelengths.append(24)
+                wavelength = 24
+                wavelengths.append(wavelength)
             elif i == 6:
-                wavelengths.append(70)
+                wavelength = 70
+                wavelengths.append(wavelength)
             elif i == 9:
-                wavelengths.append(100)
+                wavelength = 100
+                wavelengths.append(wavelength)
             elif i == 12:
-                wavelengths.append(160)
+                wavelength = 160
+                wavelengths.append(wavelength)
             elif i == 15:
-                wavelengths.append(250)
+                wavelength = 250
+                wavelengths.append(wavelength)
             elif i == 18:
-                wavelengths.append(350)
+                wavelength = 350
+                wavelengths.append(wavelength)
             elif i == 21:
-                wavelengths.append(500)
+                wavelength = 500
+                wavelengths.append(wavelength)
 
-            fluxes.append(float(row[i]))
-            fluxes_err.append(float(row[i + 2]))
+            flux = float(row[i])
+            photerr = float(row[i + 1])
+            err = float(row[i + 2])
+            if flux / photerr > tracker: # find best detected flux
+                tracker = flux / photerr
+                bestflux = flux
+                bestfreq = _c / (wavelength * 10**-6)
+            fluxes.append(flux)
+            fluxes_err.append(err)
 
             i += 3
 
@@ -77,12 +94,15 @@ for row in data:
         frequencies = wavelengths.to(u.Hz, u.spectral())
         fluxes = np.array(fluxes) * u.Jy
         fluxes_err = np.array(fluxes_err) * u.Jy
-        tguess, bguess, nguess, sguess = float(row[24]) * u.K, float(row[25]), float(row[26]) * u.cm**-2, float(row[27])
+        tguess, bguess, sguess = float(row[24]) * u.K, float(row[25]), float(row[26])
+
+        sguess = bestflux / ((blackbody.modified_blackbody(bestfreq * u.Hz, tguess, bguess, 1) / (u.erg/u.s/u.cm**2/u.Hz/u.sr)) * 10**23)
+        print(sguess)
 
         t = np.arange(minfreq, maxfreq, minfreq * 0.01)
 
         try:
-            pars, errs, chi = fit_sed.fit_modified_bb(frequencies, fluxes, fluxes_err, (tguess, bguess, nguess, sguess), detections, return_error = True)
+            pars, errs, chi = fit_sed.fit_modified_bb(frequencies, fluxes, fluxes_err, (tguess, bguess, sguess), detections, return_error = True)
 
             if plots == 'y':
                 plt.title(row[0] + ': ' + row[2])
@@ -90,7 +110,7 @@ for row in data:
                 plt.ylabel('Flux (Jy)')
                 #plt.plot(frequencies / u.Hz, (fluxes / u.Jy), 'bo', t, (blackbody.modified_blackbody(t * u.Hz, pars[0] * u.K, pars[1], pars[2] * u.cm**-2, pars[3]) / u.erg/u.s/u.cm**2/u.Hz/u.sr) * 10**23, 'r-')
                 plt.errorbar(frequencies / u.Hz, (fluxes / u.Jy), yerr = fluxes_err / u.Jy, fmt='ko')
-                plt.plot(t, (blackbody.modified_blackbody(t * u.Hz, pars[0] * u.K, pars[1], pars[2] * u.cm**-2, pars[3]) / u.erg/u.s/u.cm**2/u.Hz/u.sr) * 10**23, 'r-')
+                plt.plot(t, (blackbody.modified_blackbody(t * u.Hz, pars[0] * u.K, pars[1], pars[2]) / (u.erg/u.s/u.cm**2/u.Hz/u.sr)) * 10**23, 'r-')
                 plt.show()
 
                 outputrow.append(pars[0])
@@ -99,21 +119,24 @@ for row in data:
                 outputrow.append(errs[1])
                 outputrow.append(pars[2])
                 outputrow.append(errs[2])
-                outputrow.append(pars[3])
-                outputrow.append(errs[3])
                 outputrow.append(chi)
                 outputrow.append(detections)
         except ValueError:
+            outputrow.append('Error')
             print('Could not generate fit for ' + row[0] + ': ' + row[2] + '. Try changing the guesses.')
 
     writetofile.append(outputrow)
 
-with open('fitting_results.csv', 'w', newline = '') as fitting_results:
-    fitwriter = csv.writer(fitting_results)
-    fitwriter.writerow(['Galaxy', 'Aperture', 'ApName', 'Temp', 'Temp Error', 'Beta', 'Beta Error', 'N', 'N Error', 'Scale', 'Scale Error', 'Chi Square','Detection'])
-    for row in writetofile:
-        fitwriter.writerow(row)
-
+while True:
+    try:
+        with open('fitting_results.csv', 'w', newline = '') as fitting_results:
+            fitwriter = csv.writer(fitting_results)
+            fitwriter.writerow(['Galaxy', 'Aperture', 'ApName', 'Temp', 'Temp Error', 'Beta', 'Beta Error', 'Scale', 'Scale Error', 'Chi Square','Detection'])
+            for row in writetofile:
+                fitwriter.writerow(row)
+        break
+    except PermissionError:
+        proceed = str(input('Could not write to file. Make sure it is closed and press \'Enter\' to try again. '))
 
 #wavelengths = np.array([24, 100, 160, 250, 350, 500]) * u.um
 #frequencies = wavelengths.to(u.Hz, u.spectral())
